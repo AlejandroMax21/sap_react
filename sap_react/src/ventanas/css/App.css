@@ -1,0 +1,91 @@
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #232f33;
+  min-height: 100vh;
+}
+/* Contenedor principal */
+.container-principal {
+  background-color: #0e0e0e;
+  color: white;
+  padding: 2rem;
+  border-radius: 10px;
+  max-width: 1200px;
+  margin: 2rem auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Título */
+.titulo {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+  text-align: left;
+  width: 100%;
+}
+
+/* Controles (botones + búsqueda) */
+.barra-controles {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  gap: 0.5rem;
+}
+
+/* Botones */
+.barra-controles Button {
+  font-weight: bold;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+}
+
+.btn-crear {
+  background-color: #4CAF50 !important;
+  color: white !important;
+}
+
+.btn-editar {
+  background-color: #2196F3 !important;
+  color: white !important;
+}
+
+.btn-eliminar {
+  background-color: #d8399e !important;
+  color: white !important;
+}
+
+.btn-desactivar {
+  background-color: #ff9800 !important;
+  color: white !important;
+}
+
+.btn-activar {
+  background-color: #8bc34a !important;
+  color: white !important;
+}
+
+/* Barra de búsqueda */
+.search-bar {
+  margin-left: auto;
+}
+
+.search-input {
+  background-color: #e6e1eb !important;
+  border-radius: 20px !important;
+  padding: 0.4rem 1rem !important;
+  width: 250px !important;
+}
+
+/* Fondo de la tabla */
+.tabla-fondo {
+  background-color: #121212;
+  border-radius: 10px;
+  padding: 1rem;
+  width: 100%;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
