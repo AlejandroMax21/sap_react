@@ -14,7 +14,12 @@ module.exports = async (o) => {
 
     // Captura JSON inválido ANTES que llegue a las rutas
     app.use(express.json({ limit: '500kb' }));
-    app.use(cors());
+    app.use(cors({
+      origin: ['http://localhost:5173'], // frontend de Vite
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: true
+    }));
 
     // Rutas
     app.use('/api', router);

@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./css/App.css";
 import "./css/Modal.css";
+import axios from "axios";
 import {
   ShellBar,
   Button,
@@ -15,33 +16,73 @@ import {
   FlexBox
 } from "@ui5/webcomponents-react";
 
-
 export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const data = [
-    { sociedad: "A001", sucursal: "CDIS-01", etiqueta: "SKU-01", estado: "Activo" },
-    { sociedad: "A002", sucursal: "CDIS-02", etiqueta: "SKU-02", estado: "Inactivo" },
-    { sociedad: "A003", sucursal: "CDIS-03", etiqueta: "SKU-03", estado: "Activo" }
+  // 🔹 Cargar datos del backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await axios.post(
+          "http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=azure",
+          {}
+        );
+
+        // 🔹 Filtrar solo los campos útiles del backend
+        const records =
+          res.data?.data?.[0]?.dataRes?.map((item) => ({
+            sociedad: item.IDSOCIEDAD,
+            sucursal: item.IDCEDI,
+            etiqueta: item.IDETIQUETA,
+            valor: item.IDVALOR,
+            estado: item.ACTIVO ? "Activo" : "Inactivo"
+          })) || [];
+
+        setData(records);
+      } catch (error) {
+        console.error("Error al obtener datos:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+const columns = [
+    { 
+      Header: "Sociedad", 
+      accessor: "sociedad",
+      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
+    },
+    { 
+      Header: "Sucursal (CEDIS)", 
+      accessor: "sucursal",
+      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
+    },
+    { 
+      Header: "Etiqueta", 
+      accessor: "etiqueta",
+      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
+    },
+    { 
+      Header: "Valor", 
+      accessor: "valor",
+      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
+    },
+    { 
+      Header: "Estado", 
+      accessor: "estado",
+      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
+    }
   ];
 
-  const columns = [
-    { Header: "Sociedad", accessor: "sociedad" },
-    { Header: "Sucursal (CEDIS)", accessor: "sucursal" },
-    { Header: "Etiqueta", accessor: "etiqueta" },
-    { Header: "Estado", accessor: "estado" }
-  ];
-
-  const handleCrearClick = () => {
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
+  const handleCrearClick = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
 
   const handleGuardar = () => {
-    // Aquí puedes agregar la lógica para guardar
     console.log("Guardando...");
     setIsModalOpen(false);
   };
@@ -51,7 +92,7 @@ export default function App() {
       <ShellBar primaryTitle="CINNALOVERS" />
       <div className="container-principal">
         <h2 className="titulo">Grupos y subgrupos de SKU</h2>
-        
+
         <div className="barra-controles">
           <Button className="btn-crear" icon="add" onClick={handleCrearClick}>Crear</Button>
           <Button className="btn-editar" icon="edit">Editar</Button>
@@ -59,25 +100,28 @@ export default function App() {
           <Button className="btn-desactivar" icon="decline">Desactivar</Button>
           <Button className="btn-activar" icon="accept">Activar</Button>
           <div className="search-bar">
-            <Input
-              placeholder="Hinted search text"
-              icon="search"
-              className="search-input"
-            />
+            <Input placeholder="Buscar..." icon="search" className="search-input" />
           </div>
         </div>
 
         <div className="tabla-fondo">
-          <AnalyticalTable
-            data={data}
-            columns={columns}
-            style={{
-              width: "100%",
-              backgroundColor: "#1e1e1e",
-              color: "white",
-              borderRadius: "8px"
-            }}
-          />
+          {loading ? (
+            <p className="loading-msg">Cargando datos...</p>
+          ) : data.length > 0 ? (
+            <AnalyticalTable
+              data={data}
+              columns={columns}
+              className="ui5-table-root"
+              style={{
+                width: "100%",
+                backgroundColor: "#1e1e1e",
+                color: "white",
+                borderRadius: "8px"
+              }}
+            />
+          ) : (
+            <p className="no-data-msg">No hay datos disponibles</p>
+          )}
         </div>
       </div>
 
@@ -114,7 +158,6 @@ export default function App() {
             wrap="Wrap"
             className="modal-form-fields"
           >
-            {/* Sociedad */}
             <div className="modal-field">
               <Label required>Sociedad</Label>
               <ComboBox className="modal-combobox">
@@ -124,7 +167,6 @@ export default function App() {
               </ComboBox>
             </div>
 
-            {/* Sucursal */}
             <div className="modal-field">
               <Label required>Sucursal (CEDIS)</Label>
               <ComboBox className="modal-combobox">
@@ -134,7 +176,6 @@ export default function App() {
               </ComboBox>
             </div>
 
-            {/* Grupo Etiqueta */}
             <div className="modal-field">
               <Label required>Grupo Etiqueta</Label>
               <ComboBox className="modal-combobox modal-combobox-wide">
@@ -145,7 +186,6 @@ export default function App() {
               </ComboBox>
             </div>
 
-            {/* Etiqueta */}
             <div className="modal-field">
               <Label required>Etiqueta</Label>
               <ComboBox className="modal-combobox">
@@ -154,7 +194,6 @@ export default function App() {
               </ComboBox>
             </div>
 
-            {/* Valor */}
             <div className="modal-field">
               <Label required>Valor</Label>
               <ComboBox className="modal-combobox">
@@ -164,7 +203,6 @@ export default function App() {
             </div>
           </FlexBox>
 
-          {/* Información adicional */}
           <div className="modal-textarea-container">
             <Label>Información adicional</Label>
             <TextArea
