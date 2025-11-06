@@ -16,75 +16,160 @@ import {
   FlexBox
 } from "@ui5/webcomponents-react";
 
+const API_URL = "http://localhost:4004/api/security/gruposet/crud";
+const DB_SERVER = "mongodb";
+const LOGGED_USER = "FMIRANDAJ";
+
 export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedRow, setSelectedRow] = useState(null);
 
-  // 🔹 Cargar datos del backend
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await axios.post(
-          "http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=azure",
-          {}
-        );
+  const [form, setForm] = useState({
+    sociedad: "",
+    cedis: "",
+    grupoEtiqueta: "",
+    etiqueta: "",
+    valor: "",
+    estado: "Activo",
+    info: "",
+    id: ""
+  });
 
-        // 🔹 Filtrar solo los campos útiles del backend
-        const records =
-          res.data?.data?.[0]?.dataRes?.map((item) => ({
-            sociedad: item.IDSOCIEDAD,
-            sucursal: item.IDCEDI,
-            etiqueta: item.IDETIQUETA,
-            valor: item.IDVALOR,
-            estado: item.ACTIVO ? "Activo" : "Inactivo"
-          })) || [];
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.post(
+        API_URL,
+        {},
+        { params: { ProcessType: "GetAll", DBServer: DB_SERVER, LoggedUser: LOGGED_USER } }
+      );
 
-        setData(records);
-      } catch (error) {
-        console.error("Error al obtener datos:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      const records =
+        res?.data?.data?.[0]?.dataRes?.map((item) => ({
+          sociedad: item.IDSOCIEDAD,
+          sucursal: item.IDCEDI,
+          etiqueta: item.IDETIQUETA,
+          valor: item.IDVALOR,
+          estado: item.ACTIVO ? "Activo" : "Inactivo",
+          grupoEtiqueta: item.IDGRUPOET,
+          id: item.ID,
+          info: item.INFOAD || "",
+          borrado: !!item.BORRADO
+        })) || [];
 
-    fetchData();
-  }, []);
-
-const columns = [
-    { 
-      Header: "Sociedad", 
-      accessor: "sociedad",
-      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
-    },
-    { 
-      Header: "Sucursal (CEDIS)", 
-      accessor: "sucursal",
-      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
-    },
-    { 
-      Header: "Etiqueta", 
-      accessor: "etiqueta",
-      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
-    },
-    { 
-      Header: "Valor", 
-      accessor: "valor",
-      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
-    },
-    { 
-      Header: "Estado", 
-      accessor: "estado",
-      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
+      setData(records); // mostramos también los borrados lógicos
+    } catch (e) {
+      console.error("GetAll error:", e?.response?.data || e.message);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  const columns = [
+    { Header: "Sociedad", accessor: "sociedad" },
+    { Header: "Sucursal (CEDIS)", accessor: "sucursal" },
+    { Header: "Etiqueta", accessor: "etiqueta" },
+    { Header: "Valor", accessor: "valor" },
+    { Header: "Estado", accessor: "estado" }
   ];
 
-  const handleCrearClick = () => setIsModalOpen(true);
+  const handleEditarClick = () => {
+    if (!selectedRow) { alert("Selecciona una fila primero"); return; }
+    setForm({
+      sociedad: String(selectedRow.sociedad ?? ""),
+      cedis: String(selectedRow.sucursal ?? ""),
+      grupoEtiqueta: String(selectedRow.grupoEtiqueta ?? selectedRow.etiqueta ?? ""),
+      etiqueta: String(selectedRow.etiqueta ?? ""),
+      valor: String(selectedRow.valor ?? ""),
+      estado: selectedRow.estado === true ? "Activo"
+            : selectedRow.estado === false ? "Inactivo"
+            : (selectedRow.estado || "Activo"),
+      info: String(selectedRow.info ?? ""),
+      id: String(selectedRow.id ?? "")
+    });
+    setIsModalOpen(true);
+  };
+
   const handleCloseModal = () => setIsModalOpen(false);
 
-  const handleGuardar = () => {
-    console.log("Guardando...");
-    setIsModalOpen(false);
+  const handleActivar = async () => {
+    if (!selectedRow) { alert("Selecciona un registro"); return; }
+    try {
+      const payload = {
+        IDSOCIEDAD: Number(selectedRow.sociedad),
+        IDCEDI: Number(selectedRow.sucursal),
+        IDETIQUETA: selectedRow.etiqueta,
+        IDVALOR: selectedRow.valor,
+        IDGRUPOET: selectedRow.grupoEtiqueta,
+        ID: selectedRow.id,
+        data: { ACTIVO: true, BORRADO: false }
+      };
+      await axios.post(
+        API_URL,
+        payload,
+        { params: { ProcessType: "UpdateOne", DBServer: DB_SERVER, LoggedUser: LOGGED_USER } }
+      );
+      await fetchData();
+    } catch (err) {
+      console.error("Activar error:", err?.response?.data || err.message);
+      alert("No se pudo activar.");
+    }
+  };
+
+  const handleDesactivar = async () => {
+    if (!selectedRow) { alert("Selecciona un registro"); return; }
+    try {
+      const payload = {
+        IDSOCIEDAD: Number(selectedRow.sociedad),
+        IDCEDI: Number(selectedRow.sucursal),
+        IDETIQUETA: selectedRow.etiqueta,
+        IDVALOR: selectedRow.valor,
+        IDGRUPOET: selectedRow.grupoEtiqueta,
+        ID: selectedRow.id,
+        data: { ACTIVO: false, BORRADO: true }
+      };
+      await axios.post(
+        API_URL,
+        payload,
+        { params: { ProcessType: "UpdateOne", DBServer: DB_SERVER, LoggedUser: LOGGED_USER } }
+      );
+      await fetchData();
+    } catch (err) {
+      console.error("Desactivar error:", err?.response?.data || err.message);
+      alert("No se pudo desactivar.");
+    }
+  };
+
+  //aqui inicia el post
+  const handleGuardar = async () => {
+    try {
+      const payload = {
+        IDSOCIEDAD: Number(form.sociedad),
+        IDCEDI: Number(form.cedis),
+        IDETIQUETA: form.etiqueta,
+        IDVALOR: form.valor,
+        IDGRUPOET: form.grupoEtiqueta,
+        ID: form.id || selectedRow?.id || "",
+        data: {
+          INFOAD: form.info || "",
+          ACTIVO: form.estado === "Activo"
+        }
+      };
+      await axios.post(
+        API_URL,
+        payload,
+        { params: { ProcessType: "UpdateOne", DBServer: DB_SERVER, LoggedUser: LOGGED_USER } }
+      );
+      setIsModalOpen(false);
+      await fetchData();
+    } catch (err) {
+      console.error("UpdateOne error:", err?.response?.data || err.message);
+      alert("No se pudo actualizar.");
+    }
   };
 
   return (
@@ -94,38 +179,48 @@ const columns = [
         <h2 className="titulo">Grupos y subgrupos de SKU</h2>
 
         <div className="barra-controles">
-          <Button className="btn-crear" icon="add" onClick={handleCrearClick}>Crear</Button>
-          <Button className="btn-editar" icon="edit">Editar</Button>
-          <Button className="btn-eliminar" icon="delete">Eliminar</Button>
-          <Button className="btn-desactivar" icon="decline">Desactivar</Button>
-          <Button className="btn-activar" icon="accept">Activar</Button>
+          <Button className="btn-crear" icon="add" disabled>Crear</Button>
+          <Button className="btn-editar" icon="edit" onClick={handleEditarClick}>Editar</Button>
+
+          {/* Eliminar deshabilitado (no hace nada) */}
+          <Button className="btn-eliminar" icon="delete" disabled>Eliminar</Button>
+
+          <Button className="btn-desactivar" icon="decline" onClick={handleDesactivar}>Desactivar</Button>
+          <Button className="btn-activar" icon="accept" onClick={handleActivar}>Activar</Button>
           <div className="search-bar">
             <Input placeholder="Buscar..." icon="search" className="search-input" />
           </div>
         </div>
 
-        <div className="tabla-fondo">
+        <div className="tabla-fondo" style={{ cursor: "pointer" }}>
           {loading ? (
             <p className="loading-msg">Cargando datos...</p>
-          ) : data.length > 0 ? (
+          ) : (
             <AnalyticalTable
               data={data}
               columns={columns}
               className="ui5-table-root"
-              style={{
-                width: "100%",
-                backgroundColor: "#1e1e1e",
-                color: "white",
-                borderRadius: "8px"
+              style={{ width: "100%", backgroundColor: "#1e1e1e", color: "white", borderRadius: "8px" }}
+              onRowClick={(ev) => {
+                const r = ev?.row?.original ?? ev?.detail?.row?.original ?? null;
+                if (r) setSelectedRow(r);
+              }}
+              reactTableOptions={{
+                getRowProps: (row) => ({
+                  style: row?.original?.borrado
+                    ? {
+                        opacity: 0.45,
+                        filter: "grayscale(20%)",
+                        backgroundColor: "#282828"
+                      }
+                    : {}
+                })
               }}
             />
-          ) : (
-            <p className="no-data-msg">No hay datos disponibles</p>
           )}
         </div>
       </div>
 
-      {/* Modal */}
       <Dialog
         open={isModalOpen}
         onAfterClose={handleCloseModal}
@@ -134,17 +229,8 @@ const columns = [
           <Bar
             endContent={
               <>
-                <Button design="Transparent" onClick={handleCloseModal}>
-                  Cancelar
-                </Button>
-                <Button
-                  design="Emphasized"
-                  icon="add"
-                  onClick={handleGuardar}
-                  className="btn-guardar-modal"
-                >
-                  Guardar
-                </Button>
+                <Button design="Transparent" onClick={handleCloseModal}>Cancelar</Button>
+                <Button design="Emphasized" icon="add" onClick={handleGuardar}>Guardar</Button>
               </>
             }
           />
@@ -152,51 +238,78 @@ const columns = [
         className="modal-sku"
       >
         <div className="modal-content">
-          <FlexBox
-            direction="Row"
-            justifyContent="Start"
-            wrap="Wrap"
-            className="modal-form-fields"
-          >
+          <FlexBox direction="Row" wrap="Wrap" className="modal-form-fields">
             <div className="modal-field">
               <Label required>Sociedad</Label>
-              <ComboBox className="modal-combobox">
-                <ComboBoxItem text="S001" />
-                <ComboBoxItem text="S002" />
-                <ComboBoxItem text="S003" />
+              <ComboBox
+                className="modal-combobox"
+                value={form.sociedad}
+                onChange={(e) => setForm(f => ({ ...f, sociedad: e.detail?.value ?? "" }))}
+              >
+                <ComboBoxItem text="1005" />
+                <ComboBoxItem text="114" />
+                <ComboBoxItem text="1555" />
               </ComboBox>
             </div>
 
             <div className="modal-field">
               <Label required>Sucursal (CEDIS)</Label>
-              <ComboBox className="modal-combobox">
-                <ComboBoxItem text="CDMX" />
-                <ComboBoxItem text="Guadalajara" />
-                <ComboBoxItem text="Monterrey" />
+              <ComboBox
+                className="modal-combobox"
+                value={form.cedis}
+                onChange={(e) => setForm(f => ({ ...f, cedis: e.detail?.value ?? "" }))}
+              >
+                <ComboBoxItem text="1006" />
+                <ComboBoxItem text="113" />
+                <ComboBoxItem text="1005" />
               </ComboBox>
             </div>
 
             <div className="modal-field">
               <Label required>Grupo Etiqueta</Label>
-              <ComboBox className="modal-combobox modal-combobox-wide">
+              <ComboBox
+                className="modal-combobox modal-combobox-wide"
+                value={form.grupoEtiqueta}
+                onChange={(e) => setForm(f => ({ ...f, grupoEtiqueta: e.detail?.value ?? "" }))}
+              >
                 <ComboBoxItem text="ZLABELS_1" />
                 <ComboBoxItem text="ZLABELS_2" />
                 <ComboBoxItem text="ZLABELS_3" />
-                <ComboBoxItem text="ZLABELS_4" />
+                <ComboBoxItem text="idGruposEtiquetasPau" />
               </ComboBox>
             </div>
 
             <div className="modal-field">
               <Label required>Etiqueta</Label>
-              <ComboBox className="modal-combobox">
-                <ComboBoxItem text="Filtro1" />
-                <ComboBoxItem text="Filtro2" />
+              <ComboBox
+                className="modal-combobox"
+                value={form.etiqueta}
+                onChange={(e) => setForm(f => ({ ...f, etiqueta: e.detail?.value ?? "" }))}
+              >
+                <ComboBoxItem text="ETIQUETA JESUS" />
+                <ComboBoxItem text="ETIQUETA JESUS3" />
+                <ComboBoxItem text="IdGruposConteoSku" />
+                <ComboBoxItem text="IDAzureJ" />
               </ComboBox>
             </div>
 
             <div className="modal-field">
               <Label required>Valor</Label>
-              <ComboBox className="modal-combobox">
+              <Input
+                className="modal-combobox"
+                value={form.valor}
+                onInput={(e) => setForm(f => ({ ...f, valor: e.target?.value ?? "" }))}
+                placeholder="Valor..."
+              />
+            </div>
+
+            <div className="modal-field">
+              <Label required>Estado</Label>
+              <ComboBox
+                className="modal-combobox"
+                value={form.estado}
+                onChange={(e) => setForm(f => ({ ...f, estado: e.detail?.value ?? "" }))}
+              >
                 <ComboBoxItem text="Activo" />
                 <ComboBoxItem text="Inactivo" />
               </ComboBox>
@@ -208,6 +321,8 @@ const columns = [
             <TextArea
               placeholder="Escriba información adicional..."
               className="modal-textarea"
+              value={form.info}
+              onInput={(e) => setForm(f => ({ ...f, info: e.target?.value ?? "" }))}
             />
           </div>
         </div>
