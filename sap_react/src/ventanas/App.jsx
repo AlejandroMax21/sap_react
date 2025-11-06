@@ -26,7 +26,7 @@ export default function App() {
     const fetchData = async () => {
       try {
         const res = await axios.post(
-          "http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=azure",
+          "http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=mongodb",
           {}
         );
 
@@ -37,6 +37,11 @@ export default function App() {
             sucursal: item.IDCEDI,
             etiqueta: item.IDETIQUETA,
             valor: item.IDVALOR,
+            idgroup: item.IDGRUPOET,
+            idg: item.ID,
+            info: item.INFOAD,
+            fecha: item.FECHAREG,
+            hora: item.HORAREG,
             estado: item.ACTIVO ? "Activo" : "Inactivo"
           })) || [];
 
@@ -72,6 +77,31 @@ const columns = [
       accessor: "valor",
       headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
     },
+    {
+      Header: "IDGRUPOET", 
+      accessor: "idgroup",
+      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
+    },
+    {
+      Header: "ID", 
+      accessor: "idg",
+      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
+    },
+    {
+      Header: "Informacion", 
+      accessor: "info",
+      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
+    },
+    {
+      Header: "Fecha", 
+      accessor: "fecha",
+      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
+    },
+    {
+      Header: "Estado", 
+      accessor: "hora",
+      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
+    },
     { 
       Header: "Estado", 
       accessor: "estado",
@@ -81,7 +111,7 @@ const columns = [
 
   const handleCrearClick = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
-
+console.log("Registros cargados:", data.length, data);
   const handleGuardar = () => {
     console.log("Guardando...");
     setIsModalOpen(false);
@@ -114,9 +144,12 @@ const columns = [
               className="ui5-table-root"
               style={{
                 width: "100%",
+                height: "auto",             // ✅ permite crecimiento libre
                 backgroundColor: "#1e1e1e",
                 color: "white",
-                borderRadius: "8px"
+                borderRadius: "8px",
+                maxHeight: "600px",         // opcional: con scroll si hay muchos registros
+                overflowY: "auto"
               }}
             />
           ) : (
