@@ -13,13 +13,32 @@ import {
   ComboBox,
   ComboBoxItem,
   TextArea,
-  FlexBox
+  FlexBox,
+  SideNavigation,
+  SideNavigationItem,
+  SideNavigationSubItem,
+  Switch
 } from "@ui5/webcomponents-react";
+import "@ui5/webcomponents-icons/dist/menu.js";
+import "@ui5/webcomponents-icons/dist/home.js";
+import "@ui5/webcomponents-icons/dist/settings.js";
+import "@ui5/webcomponents-icons/dist/database.js";
 
 export default function App() {
+  // --- Estados originales ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // --- Estados añadidos del menú ---
+  const [isNavOpen, setIsNavOpen] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
+  const [dbConnection, setDbConnection] = useState("MongoDB");
+
+  // --- Cambio de conexión ---
+  const handleSwitchChange = () => {
+    setDbConnection(dbConnection === "MongoDB" ? "Azure Cosmos" : "MongoDB");
+  };
 
   // 🔹 Cargar datos del backend
   useEffect(() => {
@@ -30,7 +49,6 @@ export default function App() {
           {}
         );
 
-        // 🔹 Filtrar solo los campos útiles del backend
         const records =
           res.data?.data?.[0]?.dataRes?.map((item) => ({
             sociedad: item.IDSOCIEDAD,
@@ -42,7 +60,7 @@ export default function App() {
             info: item.INFOAD,
             fecha: item.FECHAREG,
             hora: item.HORAREG,
-            estado: item.ACTIVO ? "Activo" : "Inactivo"
+            estado: item.ACTIVO ? "Activo" : "Inactivo",
           })) || [];
 
         setData(records);
@@ -56,81 +74,105 @@ export default function App() {
     fetchData();
   }, []);
 
-const columns = [
-    { 
-      Header: "Sociedad", 
-      accessor: "sociedad",
-      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
-    },
-    { 
-      Header: "Sucursal (CEDIS)", 
-      accessor: "sucursal",
-      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
-    },
-    { 
-      Header: "Etiqueta", 
-      accessor: "etiqueta",
-      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
-    },
-    { 
-      Header: "Valor", 
-      accessor: "valor",
-      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
-    },
-    {
-      Header: "IDGRUPOET", 
-      accessor: "idgroup",
-      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
-    },
-    {
-      Header: "ID", 
-      accessor: "idg",
-      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
-    },
-    {
-      Header: "Informacion", 
-      accessor: "info",
-      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
-    },
-    {
-      Header: "Fecha", 
-      accessor: "fecha",
-      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
-    },
-    {
-      Header: "Estado", 
-      accessor: "hora",
-      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
-    },
-    { 
-      Header: "Estado", 
-      accessor: "estado",
-      headerStyle: { backgroundColor: '#2c3e50', color: '#ffffff' }
-    }
+  const columns = [
+    { Header: "Sociedad", accessor: "sociedad" },
+    { Header: "Sucursal (CEDIS)", accessor: "sucursal" },
+    { Header: "Etiqueta", accessor: "etiqueta" },
+    { Header: "Valor", accessor: "valor" },
+    { Header: "IDGRUPOET", accessor: "idgroup" },
+    { Header: "ID", accessor: "idg" },
+    { Header: "Informacion", accessor: "info" },
+    { Header: "Fecha", accessor: "fecha" },
+    { Header: "Hora", accessor: "hora" },
+    { Header: "Estado", accessor: "estado" },
   ];
 
   const handleCrearClick = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
-console.log("Registros cargados:", data.length, data);
   const handleGuardar = () => {
     console.log("Guardando...");
     setIsModalOpen(false);
   };
 
+  console.log("Registros cargados:", data.length, data);
+
   return (
     <>
-      <ShellBar primaryTitle="CINNALOVERS" />
-      <div className="container-principal">
+      {/* 🔹 ShellBar con menú hamburguesa */}
+      <ShellBar
+        primaryTitle="CINNALOVERS"
+        startButton={
+          <Button
+            icon="menu"
+            design="Transparent"
+            onClick={() => setIsNavOpen(!isNavOpen)}
+          />
+        }
+        showNotifications
+        showCoPilot
+        showProductSwitch
+      />
+
+      {/* 🔹 Menú lateral (SideNavigation) */}
+      {isNavOpen && (
+        <SideNavigation
+          style={{
+            width: "250px",
+            height: "100vh",
+            position: "fixed",
+            top: "45px",
+            left: 0,
+            backgroundColor: "#f7f7f7",
+            boxShadow: "2px 0 5px rgba(0,0,0,0.1)",
+            zIndex: 1000,
+          }}
+        >
+          <SideNavigationItem icon="home" text="Inicio" />
+          <SideNavigationItem
+            icon="database"
+            text="Grupos de SKU"
+            selected
+          />
+          <SideNavigationItem
+            icon="settings"
+            text="Configuración"
+            onClick={() => setShowConfig(true)}
+          />
+        </SideNavigation>
+      )}
+
+      {/* 🔹 Contenido original sin modificar */}
+      <div
+        className="container-principal"
+        style={{
+          marginLeft: isNavOpen ? "260px" : "0",
+          transition: "margin-left 0.3s ease",
+        }}
+      >
         <h2 className="titulo">Grupos y subgrupos de SKU</h2>
 
         <div className="barra-controles">
-          <Button className="btn-crear" icon="add" onClick={handleCrearClick}>Crear</Button>
-          <Button className="btn-editar" icon="edit">Editar</Button>
-          <Button className="btn-eliminar" icon="delete">Eliminar</Button>
-          <Button className="btn-desactivar" icon="decline">Desactivar</Button>
-          <Button className="btn-activar" icon="accept">Activar</Button>
+          <Button className="btn-crear" icon="add" onClick={handleCrearClick}>
+            Crear
+          </Button>
+          <Button className="btn-editar" icon="edit">
+            Editar
+          </Button>
+          <Button className="btn-eliminar" icon="delete">
+            Eliminar
+          </Button>
+          <Button className="btn-desactivar" icon="decline">
+            Desactivar
+          </Button>
+          <Button className="btn-activar" icon="accept">
+            Activar
+          </Button>
           <div className="search-bar">
-            <Input placeholder="Buscar..." icon="search" className="search-input" />
+            <Input
+              placeholder="Buscar..."
+              icon="search"
+              className="search-input"
+            />
           </div>
         </div>
 
@@ -144,12 +186,12 @@ console.log("Registros cargados:", data.length, data);
               className="ui5-table-root"
               style={{
                 width: "100%",
-                height: "auto",             // ✅ permite crecimiento libre
+                height: "auto",
                 backgroundColor: "#1e1e1e",
                 color: "white",
                 borderRadius: "8px",
-                maxHeight: "600px",         // opcional: con scroll si hay muchos registros
-                overflowY: "auto"
+                maxHeight: "600px",
+                overflowY: "auto",
               }}
             />
           ) : (
@@ -158,7 +200,7 @@ console.log("Registros cargados:", data.length, data);
         </div>
       </div>
 
-      {/* Modal */}
+      {/* 🔹 Modal original sin cambios */}
       <Dialog
         open={isModalOpen}
         onAfterClose={handleCloseModal}
@@ -245,6 +287,33 @@ console.log("Registros cargados:", data.length, data);
           </div>
         </div>
       </Dialog>
+
+      {/* 🔹 Ventana de configuración (nueva) */}
+      {showConfig && (
+        <Dialog
+          headerText="Configuración"
+          open={showConfig}
+          onAfterClose={() => setShowConfig(false)}
+          footer={
+            <Button design="Emphasized" onClick={() => setShowConfig(false)}>
+              Cerrar
+            </Button>
+          }
+        >
+          <FlexBox direction="Column" style={{ padding: "1rem" }}>
+            <Label>Conexión a base de datos</Label>
+            <FlexBox alignItems="Center" justifyContent="SpaceBetween">
+              <Label>{dbConnection}</Label>
+              <Switch
+                textOn="Cosmos"
+                textOff="MongoDB"
+                checked={dbConnection === "Azure Cosmos"}
+                onChange={handleSwitchChange}
+              />
+            </FlexBox>
+          </FlexBox>
+        </Dialog>
+      )}
     </>
   );
 }
