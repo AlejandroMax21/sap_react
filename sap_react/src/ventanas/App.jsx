@@ -34,7 +34,14 @@ export default function App() {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [dbConnection, setDbConnection] = useState("MongoDB");
-  const [dbPost, setDbPost]=useState("MongoDB");
+  const [dbPost, setDbPost] = useState("MongoDB");
+
+  // 🆕 Estados para el formulario del modal
+  const [sociedad, setSociedad] = useState("");
+  const [sucursal, setSucursal] = useState("");
+  const [etiqueta, setEtiqueta] = useState("");
+  const [idValor, setIdValor] = useState("");
+  const [infoAdicional, setInfoAdicional] = useState("");
 
   // --- Cambio de conexión ---
   const handleSwitchChange = () => {
@@ -46,38 +53,38 @@ export default function App() {
 
   // 🔹 Cargar datos del backend
   useEffect(() => {
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.post(
-        `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
-        {}
-      );
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const res = await axios.post(
+          `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
+          {}
+        );
 
-      const records =
-        res.data?.data?.[0]?.dataRes?.map((item) => ({
-          sociedad: item.IDSOCIEDAD,
-          sucursal: item.IDCEDI,
-          etiqueta: item.IDETIQUETA,
-          valor: item.IDVALOR,
-          idgroup: item.IDGRUPOET,
-          idg: item.ID,
-          info: item.INFOAD,
-          fecha: item.FECHAREG,
-          hora: item.HORAREG,
-          estado: item.ACTIVO ? "Activo" : "Inactivo",
-        })) || [];
+        const records =
+          res.data?.data?.[0]?.dataRes?.map((item) => ({
+            sociedad: item.IDSOCIEDAD,
+            sucursal: item.IDCEDI,
+            etiqueta: item.IDETIQUETA,
+            valor: item.IDVALOR,
+            idgroup: item.IDGRUPOET,
+            idg: item.ID,
+            info: item.INFOAD,
+            fecha: item.FECHAREG,
+            hora: item.HORAREG,
+            estado: item.ACTIVO ? "Activo" : "Inactivo",
+          })) || [];
 
-      setData(records);
-    } catch (error) {
-      console.error("Error al obtener datos:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        setData(records);
+      } catch (error) {
+        console.error("Error al obtener datos:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  fetchData();
-}, [dbConnection]);
+    fetchData();
+  }, [dbConnection]);
 
   const columns = [
     { Header: "Sociedad", accessor: "sociedad" },
@@ -94,9 +101,64 @@ export default function App() {
 
   const handleCrearClick = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
-  const handleGuardar = () => {
-    console.log("Guardando...");
-    setIsModalOpen(false);
+  const handleGuardar = async () => {
+    try {
+      // 🆕 Ahora usa los valores que el usuario seleccionó
+      const nuevoRegistro = {
+        IDSOCIEDAD: sociedad,
+        IDCEDI: sucursal,
+        IDETIQUETA: etiqueta,
+        IDVALOR: idValor,
+        INFOAD: infoAdicional,
+        ACTIVO: true,
+      };
+
+      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=Create&DBServer=${dbPost}`;
+
+      console.log("📤 Enviando POST a:", url);
+      console.log("📦 Datos:", nuevoRegistro);
+
+      const res = await axios.post(url, nuevoRegistro);
+
+      if (res.data.success) {
+        alert(`✅ Registro creado correctamente en ${dbPost}`);
+
+        // 🆕 Recargar los datos después de crear
+        const resFetch = await axios.post(
+          `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
+          {}
+        );
+        const records =
+          resFetch.data?.data?.[0]?.dataRes?.map((item) => ({
+            sociedad: item.IDSOCIEDAD,
+            sucursal: item.IDCEDI,
+            etiqueta: item.IDETIQUETA,
+            valor: item.IDVALOR,
+            idgroup: item.IDGRUPOET,
+            idg: item.ID,
+            info: item.INFOAD,
+            fecha: item.FECHAREG,
+            hora: item.HORAREG,
+            estado: item.ACTIVO ? "Activo" : "Inactivo",
+          })) || [];
+        setData(records);
+      } else {
+        alert(`⚠️ Error al crear el registro en ${dbPost}`);
+      }
+
+      setIsModalOpen(false);
+
+      // 🆕 Limpiar el formulario
+      setSociedad("");
+      setSucursal("");
+      setEtiqueta("");
+      setIdValor("");
+      setInfoAdicional("");
+
+    } catch (error) {
+      console.error("❌ Error al guardar:", error);
+      alert("Error al guardar el registro: " + error.message);
+    }
   };
 
   console.log("Registros cargados:", data.length, data);
@@ -240,7 +302,10 @@ export default function App() {
           >
             <div className="modal-field">
               <Label required>Sociedad</Label>
-              <ComboBox className="modal-combobox">
+              <ComboBox
+                className="modal-combobox"
+                onChange={(e) => setSociedad(e.detail.item.text)}
+              >
                 <ComboBoxItem text="S001" />
                 <ComboBoxItem text="S002" />
                 <ComboBoxItem text="S003" />
@@ -249,7 +314,10 @@ export default function App() {
 
             <div className="modal-field">
               <Label required>Sucursal (CEDIS)</Label>
-              <ComboBox className="modal-combobox">
+              <ComboBox
+                className="modal-combobox"
+                onChange={(e) => setSucursal(e.detail.item.text)}
+              >
                 <ComboBoxItem text="CDMX" />
                 <ComboBoxItem text="Guadalajara" />
                 <ComboBoxItem text="Monterrey" />
@@ -258,7 +326,10 @@ export default function App() {
 
             <div className="modal-field">
               <Label required>Etiqueta</Label>
-              <ComboBox className="modal-combobox">
+              <ComboBox
+                className="modal-combobox"
+                onChange={(e) => setEtiqueta(e.detail.item.text)}
+              >
                 <ComboBoxItem text="Filtro1" />
                 <ComboBoxItem text="Filtro2" />
               </ComboBox>
@@ -266,20 +337,24 @@ export default function App() {
 
             <div className="modal-field">
               <Label required>IDValor</Label>
-              <ComboBox className="modal-combobox">
+              <ComboBox
+                className="modal-combobox"
+                onChange={(e) => setIdValor(e.detail.item.text)}
+              >
                 <ComboBoxItem text="idValor_01" />
                 <ComboBoxItem text="idValor_02" />
                 <ComboBoxItem text="idValor_03" />
               </ComboBox>
             </div>
+
             <div className="switch_etiqueta">
               <Label>{dbPost}</Label>
-                <Switch
-                  textOn="Cosmos "
-                  textOff="MongoDB"
-                  checked={dbPost === "Azure Cosmos"}
-                  onChange={CambioDbPost}
-                />
+              <Switch
+                textOn="Cosmos "
+                textOff="MongoDB"
+                checked={dbPost === "Azure Cosmos"}
+                onChange={CambioDbPost}
+              />
             </div>
           </FlexBox>
 
@@ -288,6 +363,7 @@ export default function App() {
             <TextArea
               placeholder="Escriba información adicional..."
               className="modal-textarea"
+              onChange={(e) => setInfoAdicional(e.detail.value)}
             />
           </div>
         </div>
