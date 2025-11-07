@@ -34,45 +34,50 @@ export default function App() {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [dbConnection, setDbConnection] = useState("MongoDB");
+  const [dbPost, setDbPost]=useState("MongoDB");
 
   // --- Cambio de conexión ---
   const handleSwitchChange = () => {
-    setDbConnection(dbConnection === "MongoDB" ? "Azure Cosmos" : "MongoDB");
+    setDbConnection(dbConnection === "MongoDB" ? "Azure" : "MongoDB");
+  };
+  const CambioDbPost = () => {
+    setDbPost(dbPost === "MongoDB" ? "Azure" : "MongoDB");
   };
 
   // 🔹 Cargar datos del backend
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await axios.post(
-          "http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=mongodb",
-          {}
-        );
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.post(
+        `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
+        {}
+      );
 
-        const records =
-          res.data?.data?.[0]?.dataRes?.map((item) => ({
-            sociedad: item.IDSOCIEDAD,
-            sucursal: item.IDCEDI,
-            etiqueta: item.IDETIQUETA,
-            valor: item.IDVALOR,
-            idgroup: item.IDGRUPOET,
-            idg: item.ID,
-            info: item.INFOAD,
-            fecha: item.FECHAREG,
-            hora: item.HORAREG,
-            estado: item.ACTIVO ? "Activo" : "Inactivo",
-          })) || [];
+      const records =
+        res.data?.data?.[0]?.dataRes?.map((item) => ({
+          sociedad: item.IDSOCIEDAD,
+          sucursal: item.IDCEDI,
+          etiqueta: item.IDETIQUETA,
+          valor: item.IDVALOR,
+          idgroup: item.IDGRUPOET,
+          idg: item.ID,
+          info: item.INFOAD,
+          fecha: item.FECHAREG,
+          hora: item.HORAREG,
+          estado: item.ACTIVO ? "Activo" : "Inactivo",
+        })) || [];
 
-        setData(records);
-      } catch (error) {
-        console.error("Error al obtener datos:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      setData(records);
+    } catch (error) {
+      console.error("Error al obtener datos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchData();
-  }, []);
+  fetchData();
+}, [dbConnection]);
 
   const columns = [
     { Header: "Sociedad", accessor: "sociedad" },
@@ -200,7 +205,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* 🔹 Modal original sin cambios */}
+      {/* Modal */}
       <Dialog
         open={isModalOpen}
         onAfterClose={handleCloseModal}
@@ -252,16 +257,6 @@ export default function App() {
             </div>
 
             <div className="modal-field">
-              <Label required>Grupo Etiqueta</Label>
-              <ComboBox className="modal-combobox modal-combobox-wide">
-                <ComboBoxItem text="ZLABELS_1" />
-                <ComboBoxItem text="ZLABELS_2" />
-                <ComboBoxItem text="ZLABELS_3" />
-                <ComboBoxItem text="ZLABELS_4" />
-              </ComboBox>
-            </div>
-
-            <div className="modal-field">
               <Label required>Etiqueta</Label>
               <ComboBox className="modal-combobox">
                 <ComboBoxItem text="Filtro1" />
@@ -270,11 +265,21 @@ export default function App() {
             </div>
 
             <div className="modal-field">
-              <Label required>Valor</Label>
+              <Label required>IDValor</Label>
               <ComboBox className="modal-combobox">
-                <ComboBoxItem text="Activo" />
-                <ComboBoxItem text="Inactivo" />
+                <ComboBoxItem text="idValor_01" />
+                <ComboBoxItem text="idValor_02" />
+                <ComboBoxItem text="idValor_03" />
               </ComboBox>
+            </div>
+            <div className="switch_etiqueta">
+              <Label>{dbPost}</Label>
+                <Switch
+                  textOn="Cosmos "
+                  textOff="MongoDB"
+                  checked={dbPost === "Azure Cosmos"}
+                  onChange={CambioDbPost}
+                />
             </div>
           </FlexBox>
 
