@@ -118,7 +118,12 @@ export default function App() {
       console.log("📤 Enviando POST a:", url);
       console.log("📦 Datos:", nuevoRegistro);
 
-      const res = await axios.post(url, nuevoRegistro);
+      const res = await axios.post(url, nuevoRegistro, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
 
       if (res.data.success) {
         alert(`✅ Registro creado correctamente en ${dbPost}`);
