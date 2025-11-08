@@ -550,7 +550,7 @@ const handleEditarClick = () => {
             <TextArea
               placeholder="Escriba información adicional..."
               className="modal-textarea"
-              onChange={(e) => setInfoAdicional(e.detail.value)}
+              onChange={(e) => setInfoAdicional(e.target.value)}
               value={infoAdicional}
             />
           </div>
