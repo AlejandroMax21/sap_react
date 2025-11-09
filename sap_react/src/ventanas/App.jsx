@@ -29,6 +29,8 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedRow, setSelectedRow] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   // --- Estados añadidos del menú ---
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -41,6 +43,8 @@ export default function App() {
   const [sucursal, setSucursal] = useState("");
   const [etiqueta, setEtiqueta] = useState("");
   const [idValor, setIdValor] = useState("");
+  const [idGroupEt, setidGroupEt] = useState("");
+  const [id, setid] = useState("");
   const [infoAdicional, setInfoAdicional] = useState("");
 
   // --- Cambio de conexión ---
@@ -99,36 +103,49 @@ export default function App() {
     { Header: "Estado", accessor: "estado" },
   ];
 
-  const handleCrearClick = () => setIsModalOpen(true);
+  const handleCrearClick = () => {
+    setIsEditing(false);
+    setSociedad("");
+    setSucursal("");
+    setEtiqueta("");
+    setIdValor("");
+    setInfoAdicional("");
+    setidGroupEt("");
+    setid("");
+    setIsModalOpen(true);
+  };
   const handleCloseModal = () => setIsModalOpen(false);
   const handleGuardar = async () => {
     try {
-      // 🆕 Ahora usa los valores que el usuario seleccionó
-      const nuevoRegistro = {
-        IDSOCIEDAD: sociedad,
-        IDCEDI: sucursal,
+      const registro = {
+        IDSOCIEDAD: Number(sociedad),
+        IDCEDI: Number(sucursal),
         IDETIQUETA: etiqueta,
         IDVALOR: idValor,
         INFOAD: infoAdicional,
+        IDGRUPOET: idGroupEt,
+        ID: id,
         ACTIVO: true,
       };
 
-      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=Create&DBServer=${dbPost}`;
+      const processType = isEditing ? "UpdateOne" : "Create";
+      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=${processType}&DBServer=${dbConnection}`;
 
-      console.log("📤 Enviando POST a:", url);
-      console.log("📦 Datos:", nuevoRegistro);
 
-      const res = await axios.post(url, nuevoRegistro, {
+
+      console.log(`📤 Enviando ${processType} a:`, url);
+      console.log("📦 Datos:", registro);
+
+      const res = await axios.post(url, registro, {
         headers: {
           "Content-Type": "application/json",
         },
       });
 
+      if (res.data?.success || res.status === 200) {
+        alert(`✅ Registro ${isEditing ? "actualizado" : "creado"} correctamente`);
 
-      if (res.data.success) {
-        alert(`✅ Registro creado correctamente en ${dbPost}`);
-
-        // 🆕 Recargar los datos después de crear
+        // 🔄 Refrescar los datos después de guardar
         const resFetch = await axios.post(
           `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
           {}
@@ -148,24 +165,171 @@ export default function App() {
           })) || [];
         setData(records);
       } else {
-        alert(`⚠️ Error al crear el registro en ${dbPost}`);
+        alert(`⚠️ Error al ${isEditing ? "actualizar" : "crear"} el registro`);
       }
 
+      // Cerrar el modal y limpiar
       setIsModalOpen(false);
-
-      // 🆕 Limpiar el formulario
-      setSociedad("");
-      setSucursal("");
-      setEtiqueta("");
-      setIdValor("");
-      setInfoAdicional("");
-
+      setIsEditing(false);
+      setSelectedRow(null);
     } catch (error) {
       console.error("❌ Error al guardar:", error);
       alert("Error al guardar el registro: " + error.message);
     }
   };
 
+
+  const handleEditarClick = () => {
+    if (!selectedRow) {
+      alert("Selecciona una fila primero");
+      return;
+    }
+
+    // Cargar los datos seleccionados al modal
+    setSociedad(selectedRow.sociedad || "");
+    setSucursal(selectedRow.sucursal || "");
+    setEtiqueta(selectedRow.etiqueta || "");
+    setIdValor(selectedRow.valor || "");
+    setInfoAdicional(selectedRow.info || "");
+    setidGroupEt(selectedRow.idgroup || "");
+    setid(selectedRow.idg || "");
+
+    setIsEditing(true);
+    setIsModalOpen(true);
+
+  };
+
+
+  const handleActivar = async () => {
+    if (!selectedRow) { alert("Selecciona un registro"); return; }
+
+    try {
+      const payload = {
+        IDSOCIEDAD: selectedRow.sociedad,
+        IDCEDI: selectedRow.sucursal,
+        IDETIQUETA: selectedRow.etiqueta,
+        IDVALOR: selectedRow.valor,
+        IDGRUPOET: selectedRow.idgroup,
+        ID: selectedRow.idg
+        
+      };
+
+      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=DeleteOne&DBServer=${dbConnection}`;
+      await axios.post(url, payload);
+
+      alert("✅ Registro activado");
+      // 🔄 Refrescar la tabla
+      const res = await axios.post(
+        `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
+        {}
+      );
+      const records =
+        res.data?.data?.[0]?.dataRes?.map((item) => ({
+          sociedad: item.IDSOCIEDAD,
+          sucursal: item.IDCEDI,
+          etiqueta: item.IDETIQUETA,
+          valor: item.IDVALOR,
+          idgroup: item.IDGRUPOET,
+          idg: item.ID,
+          info: item.INFOAD,
+          fecha: item.FECHAREG,
+          hora: item.HORAREG,
+          estado: item.ACTIVO ? "Activo" : "Inactivo",
+        })) || [];
+      setData(records);
+
+    } catch (err) {
+      console.error("Error al activar:", err);
+      alert("❌ No se pudo activar el registro");
+    }
+  };
+
+
+  const handleDesactivar = async () => {
+    if (!selectedRow) { alert("Selecciona un registro"); return; }
+
+    try {
+      const payload = {
+        IDSOCIEDAD: selectedRow.sociedad,
+        IDCEDI: selectedRow.sucursal,
+        IDETIQUETA: selectedRow.etiqueta,
+        IDVALOR: selectedRow.valor,
+        IDGRUPOET: selectedRow.idgroup,
+        ID: selectedRow.idg
+      };
+
+      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=DeleteOne&DBServer=${dbConnection}`;
+      await axios.post(url, payload);
+
+      alert("🟡 Registro desactivado");
+      // 🔄 Refrescar tabla
+      const res = await axios.post(
+        `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
+        {}
+      );
+      const records =
+        res.data?.data?.[0]?.dataRes?.map((item) => ({
+          sociedad: item.IDSOCIEDAD,
+          sucursal: item.IDCEDI,
+          etiqueta: item.IDETIQUETA,
+          valor: item.IDVALOR,
+          idgroup: item.IDGRUPOET,
+          idg: item.ID,
+          info: item.INFOAD,
+          fecha: item.FECHAREG,
+          hora: item.HORAREG,
+          estado: item.ACTIVO ? "Activo" : "Inactivo",
+        })) || [];
+      setData(records);
+
+    } catch (err) {
+      console.error("Error al desactivar:", err);
+      alert("❌ No se pudo desactivar el registro");
+    }
+  };
+
+  const handleEliminarClick = async () => {
+    if (!selectedRow) { alert("Selecciona un registro"); return; }
+
+    try {
+      const payload = {
+        IDSOCIEDAD: selectedRow.sociedad,
+        IDCEDI: selectedRow.sucursal,
+        IDETIQUETA: selectedRow.etiqueta,
+        IDVALOR: selectedRow.valor,
+        IDGRUPOET: selectedRow.idgroup,
+        ID: selectedRow.idg
+      };
+
+      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=DeleteHard&DBServer=${dbConnection}`;
+      await axios.post(url, payload);
+
+      alert("🟡 Registro eliminado");
+      // 🔄 Refrescar tabla
+      const res = await axios.post(
+        `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
+        {}
+      );
+      const records =
+        res.data?.data?.[0]?.dataRes?.map((item) => ({
+          sociedad: item.IDSOCIEDAD,
+          sucursal: item.IDCEDI,
+          etiqueta: item.IDETIQUETA,
+          valor: item.IDVALOR,
+          idgroup: item.IDGRUPOET,
+          idg: item.ID,
+          info: item.INFOAD,
+          fecha: item.FECHAREG,
+          hora: item.HORAREG,
+          estado: item.ACTIVO ? "Activo" : "Inactivo",
+        })) || [];
+      setData(records);
+
+    } catch (err) {
+      console.error("Error al eliminar :", err);
+      alert("❌ No se pudo eliminar el registro");
+    }
+  };
   console.log("Registros cargados:", data.length, data);
 
   return (
@@ -227,16 +391,16 @@ export default function App() {
           <Button className="btn-crear" icon="add" onClick={handleCrearClick}>
             Crear
           </Button>
-          <Button className="btn-editar" icon="edit">
+          <Button className="btn-editar" icon="edit" onClick={handleEditarClick}>
             Editar
           </Button>
-          <Button className="btn-eliminar" icon="delete">
+          <Button className="btn-eliminar" icon="delete" onClick={handleEliminarClick}>
             Eliminar
           </Button>
-          <Button className="btn-desactivar" icon="decline">
+          <Button className="btn-desactivar" icon="decline" onClick={handleDesactivar}>
             Desactivar
           </Button>
-          <Button className="btn-activar" icon="accept">
+          <Button className="btn-activar" icon="accept" onClick={handleActivar}>
             Activar
           </Button>
           <div className="search-bar">
@@ -248,7 +412,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="tabla-fondo">
+        <div className="tabla-fondo" style={{ cursor: "pointer" }}>
           {loading ? (
             <p className="loading-msg">Cargando datos...</p>
           ) : data.length > 0 ? (
@@ -264,6 +428,21 @@ export default function App() {
                 borderRadius: "8px",
                 maxHeight: "600px",
                 overflowY: "auto",
+              }}
+              onRowClick={(ev) => {
+                const r = ev?.row?.original ?? ev?.detail?.row?.original ?? null;
+                if (r) setSelectedRow(r);
+              }}
+              reactTableOptions={{
+                getRowProps: (row) => ({
+                  style: row?.original?.borrado
+                    ? {
+                      opacity: 0.45,
+                      filter: "grayscale(20%)",
+                      backgroundColor: "#282828"
+                    }
+                    : {}
+                })
               }}
             />
           ) : (
@@ -309,11 +488,15 @@ export default function App() {
               <Label required>Sociedad</Label>
               <ComboBox
                 className="modal-combobox"
-                onChange={(e) => setSociedad(e.detail.item.text)}
+                onChange={(e) => {
+                  const value = e.detail?.item?.text || e.target.value;
+                  setSociedad(value);
+                }}
+                value={sociedad}
               >
-                <ComboBoxItem text="S001" />
-                <ComboBoxItem text="S002" />
-                <ComboBoxItem text="S003" />
+                <ComboBoxItem text="111" />
+                <ComboBoxItem text="222" />
+                <ComboBoxItem text="333" />
               </ComboBox>
             </div>
 
@@ -321,11 +504,15 @@ export default function App() {
               <Label required>Sucursal (CEDIS)</Label>
               <ComboBox
                 className="modal-combobox"
-                onChange={(e) => setSucursal(e.detail.item.text)}
+                onChange={(e) => {
+                  const value = e.detail?.item?.text || e.target.value;
+                  setSucursal(value);
+                }}
+                value={sucursal}
               >
-                <ComboBoxItem text="CDMX" />
-                <ComboBoxItem text="Guadalajara" />
-                <ComboBoxItem text="Monterrey" />
+                <ComboBoxItem text="100" />
+                <ComboBoxItem text="101" />
+                <ComboBoxItem text="102" />
               </ComboBox>
             </div>
 
@@ -333,7 +520,11 @@ export default function App() {
               <Label required>Etiqueta</Label>
               <ComboBox
                 className="modal-combobox"
-                onChange={(e) => setEtiqueta(e.detail.item.text)}
+                onChange={(e) => {
+                  const value = e.detail?.item?.text || e.target.value;
+                  setEtiqueta(value);
+                }}
+                value={etiqueta}
               >
                 <ComboBoxItem text="Filtro1" />
                 <ComboBoxItem text="Filtro2" />
@@ -344,14 +535,41 @@ export default function App() {
               <Label required>IDValor</Label>
               <ComboBox
                 className="modal-combobox"
-                onChange={(e) => setIdValor(e.detail.item.text)}
+                onChange={(e) => {
+                  const value = e.detail?.item?.text || e.target.value;
+                  setIdValor(value);
+                }}
+                value={idValor}
               >
                 <ComboBoxItem text="idValor_01" />
                 <ComboBoxItem text="idValor_02" />
                 <ComboBoxItem text="idValor_03" />
               </ComboBox>
             </div>
-
+            <div className="modal-field">
+              <Label required>IDGROUPET</Label>
+              <ComboBox
+                className="modal-combobox"
+                onChange={(e) => {
+                  const value = e.detail?.item?.text || e.target.value;
+                  setidGroupEt(value);
+                }}
+                value={idGroupEt}
+              >
+                <ComboBoxItem text="Grupo01" />
+                <ComboBoxItem text="Grupo03" />
+                <ComboBoxItem text="Grupo02" />
+              </ComboBox>
+            </div>
+            <div className="modal-field">
+              <Label required>ID</Label>
+              <Input
+                className="modal-input"
+                value={id}
+                placeholder="id grupo"
+                onChange={(e) => setid(e.target.value)}
+              />
+            </div>
             <div className="switch_etiqueta">
               <Label>{dbPost}</Label>
               <Switch
@@ -368,7 +586,8 @@ export default function App() {
             <TextArea
               placeholder="Escriba información adicional..."
               className="modal-textarea"
-              onChange={(e) => setInfoAdicional(e.detail.value)}
+              onChange={(e) => setInfoAdicional(e.target.value)}
+              value={infoAdicional}
             />
           </div>
         </div>
