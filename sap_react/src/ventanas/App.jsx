@@ -116,42 +116,115 @@ export default function App() {
   };
   const handleCloseModal = () => setIsModalOpen(false);
   const handleGuardar = async () => {
-  try {
-    const registro = {
-      IDSOCIEDAD: Number(sociedad),
-      IDCEDI: Number(sucursal),
-      IDETIQUETA: etiqueta,
-      IDVALOR: idValor,
-      INFOAD: infoAdicional,
-      IDGRUPOET:idGroupEt,
-      ID:id,
-      ACTIVO: true,
-    };
+    try {
+      const registro = {
+        IDSOCIEDAD: Number(sociedad),
+        IDCEDI: Number(sucursal),
+        IDETIQUETA: etiqueta,
+        IDVALOR: idValor,
+        INFOAD: infoAdicional,
+        IDGRUPOET: idGroupEt,
+        ID: id,
+        ACTIVO: true,
+      };
 
-    const processType = isEditing ? "UpdateOne" : "Create";
-    const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=${processType}&DBServer=${dbConnection}`;
+      const processType = isEditing ? "UpdateOne" : "Create";
+      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=${processType}&DBServer=${dbConnection}`;
 
-    
 
-    console.log(`📤 Enviando ${processType} a:`, url);
-    console.log("📦 Datos:", registro);
-    
-    const res = await axios.post(url, registro, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
 
-    if (res.data?.success || res.status === 200) {
-      alert(`✅ Registro ${isEditing ? "actualizado" : "creado"} correctamente`);
+      console.log(`📤 Enviando ${processType} a:`, url);
+      console.log("📦 Datos:", registro);
 
-      // 🔄 Refrescar los datos después de guardar
-      const resFetch = await axios.post(
+      const res = await axios.post(url, registro, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (res.data?.success || res.status === 200) {
+        alert(`✅ Registro ${isEditing ? "actualizado" : "creado"} correctamente`);
+
+        // 🔄 Refrescar los datos después de guardar
+        const resFetch = await axios.post(
+          `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
+          {}
+        );
+        const records =
+          resFetch.data?.data?.[0]?.dataRes?.map((item) => ({
+            sociedad: item.IDSOCIEDAD,
+            sucursal: item.IDCEDI,
+            etiqueta: item.IDETIQUETA,
+            valor: item.IDVALOR,
+            idgroup: item.IDGRUPOET,
+            idg: item.ID,
+            info: item.INFOAD,
+            fecha: item.FECHAREG,
+            hora: item.HORAREG,
+            estado: item.ACTIVO ? "Activo" : "Inactivo",
+          })) || [];
+        setData(records);
+      } else {
+        alert(`⚠️ Error al ${isEditing ? "actualizar" : "crear"} el registro`);
+      }
+
+      // Cerrar el modal y limpiar
+      setIsModalOpen(false);
+      setIsEditing(false);
+      setSelectedRow(null);
+    } catch (error) {
+      console.error("❌ Error al guardar:", error);
+      alert("Error al guardar el registro: " + error.message);
+    }
+  };
+
+
+  const handleEditarClick = () => {
+    if (!selectedRow) {
+      alert("Selecciona una fila primero");
+      return;
+    }
+
+    // Cargar los datos seleccionados al modal
+    setSociedad(selectedRow.sociedad || "");
+    setSucursal(selectedRow.sucursal || "");
+    setEtiqueta(selectedRow.etiqueta || "");
+    setIdValor(selectedRow.valor || "");
+    setInfoAdicional(selectedRow.info || "");
+    setidGroupEt(selectedRow.idgroup || "");
+    setid(selectedRow.idg || "");
+
+    setIsEditing(true);
+    setIsModalOpen(true);
+
+  };
+
+
+  const handleActivar = async () => {
+    if (!selectedRow) { alert("Selecciona un registro"); return; }
+
+    try {
+      const payload = {
+        IDSOCIEDAD: selectedRow.sociedad,
+        IDCEDI: selectedRow.sucursal,
+        IDETIQUETA: selectedRow.etiqueta,
+        IDVALOR: selectedRow.valor,
+        IDGRUPOET: selectedRow.idgroup,
+        ID: selectedRow.idg
+        
+      };
+
+      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=DeleteOne&DBServer=${dbConnection}`;
+      await axios.post(url, payload);
+
+      alert("✅ Registro activado");
+      // 🔄 Refrescar la tabla
+      const res = await axios.post(
         `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
         {}
       );
       const records =
-        resFetch.data?.data?.[0]?.dataRes?.map((item) => ({
+        res.data?.data?.[0]?.dataRes?.map((item) => ({
           sociedad: item.IDSOCIEDAD,
           sucursal: item.IDCEDI,
           etiqueta: item.IDETIQUETA,
@@ -164,136 +237,99 @@ export default function App() {
           estado: item.ACTIVO ? "Activo" : "Inactivo",
         })) || [];
       setData(records);
-    } else {
-      alert(`⚠️ Error al ${isEditing ? "actualizar" : "crear"} el registro`);
+
+    } catch (err) {
+      console.error("Error al activar:", err);
+      alert("❌ No se pudo activar el registro");
     }
-
-    // Cerrar el modal y limpiar
-    setIsModalOpen(false);
-    setIsEditing(false);
-    setSelectedRow(null);
-  } catch (error) {
-    console.error("❌ Error al guardar:", error);
-    alert("Error al guardar el registro: " + error.message);
-  }
-};
-
-
-const handleEditarClick = () => {
-  if (!selectedRow) {
-    alert("Selecciona una fila primero");
-    return;
-  }
-
-  // Cargar los datos seleccionados al modal
-  setSociedad(selectedRow.sociedad || "");
-  setSucursal(selectedRow.sucursal || "");
-  setEtiqueta(selectedRow.etiqueta || "");
-  setIdValor(selectedRow.valor || "");
-  setInfoAdicional(selectedRow.info || "");
-  setidGroupEt(selectedRow.idgroup || "");
-  setid(selectedRow.idg || "");
-
-  setIsEditing(true);
-  setIsModalOpen(true);
-  
-};
-
-
-  const handleActivar = async () => {
-  if (!selectedRow) { alert("Selecciona un registro"); return; }
-
-  try {
-    const payload = {
-      IDSOCIEDAD: selectedRow.sociedad,
-      IDCEDI: selectedRow.sucursal,
-      IDETIQUETA: selectedRow.etiqueta,
-      IDVALOR: selectedRow.valor,
-      IDGRUPOET: selectedRow.idgroup,
-      ID: selectedRow.idg,
-      INFOAD: selectedRow.info,
-      ACTIVO: true,
-      BORRADO: false
-    };
-
-    const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=UpdateOne&DBServer=${dbConnection}`;
-    await axios.post(url, payload);
-
-    alert("✅ Registro activado");
-    // 🔄 Refrescar la tabla
-    const res = await axios.post(
-      `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
-      {}
-    );
-    const records =
-      res.data?.data?.[0]?.dataRes?.map((item) => ({
-        sociedad: item.IDSOCIEDAD,
-        sucursal: item.IDCEDI,
-        etiqueta: item.IDETIQUETA,
-        valor: item.IDVALOR,
-        idgroup: item.IDGRUPOET,
-        idg: item.ID,
-        info: item.INFOAD,
-        fecha: item.FECHAREG,
-        hora: item.HORAREG,
-        estado: item.ACTIVO ? "Activo" : "Inactivo",
-      })) || [];
-    setData(records);
-
-  } catch (err) {
-    console.error("Error al activar:", err);
-    alert("❌ No se pudo activar el registro");
-  }
-};
+  };
 
 
   const handleDesactivar = async () => {
-  if (!selectedRow) { alert("Selecciona un registro"); return; }
+    if (!selectedRow) { alert("Selecciona un registro"); return; }
 
-  try {
-    const payload = {
-      IDSOCIEDAD: selectedRow.sociedad,
-      IDCEDI: selectedRow.sucursal,
-      IDETIQUETA: selectedRow.etiqueta,
-      IDVALOR: selectedRow.valor,
-      IDGRUPOET: selectedRow.idgroup,
-      ID: selectedRow.idg,
-      INFOAD: selectedRow.info,
-      ACTIVO: false,
-      BORRADO: true
-    };
+    try {
+      const payload = {
+        IDSOCIEDAD: selectedRow.sociedad,
+        IDCEDI: selectedRow.sucursal,
+        IDETIQUETA: selectedRow.etiqueta,
+        IDVALOR: selectedRow.valor,
+        IDGRUPOET: selectedRow.idgroup,
+        ID: selectedRow.idg
+      };
 
-    const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=UpdateOne&DBServer=${dbConnection}`;
-    await axios.post(url, payload);
+      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=DeleteOne&DBServer=${dbConnection}`;
+      await axios.post(url, payload);
 
-    alert("🟡 Registro desactivado");
-    // 🔄 Refrescar tabla
-    const res = await axios.post(
-      `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
-      {}
-    );
-    const records =
-      res.data?.data?.[0]?.dataRes?.map((item) => ({
-        sociedad: item.IDSOCIEDAD,
-        sucursal: item.IDCEDI,
-        etiqueta: item.IDETIQUETA,
-        valor: item.IDVALOR,
-        idgroup: item.IDGRUPOET,
-        idg: item.ID,
-        info: item.INFOAD,
-        fecha: item.FECHAREG,
-        hora: item.HORAREG,
-        estado: item.ACTIVO ? "Activo" : "Inactivo",
-      })) || [];
-    setData(records);
+      alert("🟡 Registro desactivado");
+      // 🔄 Refrescar tabla
+      const res = await axios.post(
+        `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
+        {}
+      );
+      const records =
+        res.data?.data?.[0]?.dataRes?.map((item) => ({
+          sociedad: item.IDSOCIEDAD,
+          sucursal: item.IDCEDI,
+          etiqueta: item.IDETIQUETA,
+          valor: item.IDVALOR,
+          idgroup: item.IDGRUPOET,
+          idg: item.ID,
+          info: item.INFOAD,
+          fecha: item.FECHAREG,
+          hora: item.HORAREG,
+          estado: item.ACTIVO ? "Activo" : "Inactivo",
+        })) || [];
+      setData(records);
 
-  } catch (err) {
-    console.error("Error al desactivar:", err);
-    alert("❌ No se pudo desactivar el registro");
-  }
-};
+    } catch (err) {
+      console.error("Error al desactivar:", err);
+      alert("❌ No se pudo desactivar el registro");
+    }
+  };
 
+  const handleEliminarClick = async () => {
+    if (!selectedRow) { alert("Selecciona un registro"); return; }
 
+    try {
+      const payload = {
+        IDSOCIEDAD: selectedRow.sociedad,
+        IDCEDI: selectedRow.sucursal,
+        IDETIQUETA: selectedRow.etiqueta,
+        IDVALOR: selectedRow.valor,
+        IDGRUPOET: selectedRow.idgroup,
+        ID: selectedRow.idg
+      };
+
+      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=DeleteHard&DBServer=${dbConnection}`;
+      await axios.post(url, payload);
+
+      alert("🟡 Registro eliminado");
+      // 🔄 Refrescar tabla
+      const res = await axios.post(
+        `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
+        {}
+      );
+      const records =
+        res.data?.data?.[0]?.dataRes?.map((item) => ({
+          sociedad: item.IDSOCIEDAD,
+          sucursal: item.IDCEDI,
+          etiqueta: item.IDETIQUETA,
+          valor: item.IDVALOR,
+          idgroup: item.IDGRUPOET,
+          idg: item.ID,
+          info: item.INFOAD,
+          fecha: item.FECHAREG,
+          hora: item.HORAREG,
+          estado: item.ACTIVO ? "Activo" : "Inactivo",
+        })) || [];
+      setData(records);
+
+    } catch (err) {
+      console.error("Error al eliminar :", err);
+      alert("❌ No se pudo eliminar el registro");
+    }
+  };
   console.log("Registros cargados:", data.length, data);
 
   return (
@@ -358,7 +394,7 @@ const handleEditarClick = () => {
           <Button className="btn-editar" icon="edit" onClick={handleEditarClick}>
             Editar
           </Button>
-          <Button className="btn-eliminar" icon="delete">
+          <Button className="btn-eliminar" icon="delete" onClick={handleEliminarClick}>
             Eliminar
           </Button>
           <Button className="btn-desactivar" icon="decline" onClick={handleDesactivar}>
@@ -401,10 +437,10 @@ const handleEditarClick = () => {
                 getRowProps: (row) => ({
                   style: row?.original?.borrado
                     ? {
-                        opacity: 0.45,
-                        filter: "grayscale(20%)",
-                        backgroundColor: "#282828"
-                      }
+                      opacity: 0.45,
+                      filter: "grayscale(20%)",
+                      backgroundColor: "#282828"
+                    }
                     : {}
                 })
               }}
