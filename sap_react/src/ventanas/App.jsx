@@ -201,23 +201,43 @@ export default function App() {
 
 
   const handleActivar = async () => {
-    if (!selectedRow) { alert("Selecciona un registro"); return; }
+    // Verificar si hay una fila seleccionada
+    if (!selectedRow) {
+      alert("⚠️ Selecciona un registro de la tabla primero");
+      return;
+    }
 
     try {
+      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=UpdateOne&DBServer=${dbConnection}&LoggedUser=FMIRANDAJ`;
+
+      // Payload con la estructura que usa tu backend
       const payload = {
+        // Llaves para identificar el registro
         IDSOCIEDAD: selectedRow.sociedad,
         IDCEDI: selectedRow.sucursal,
         IDETIQUETA: selectedRow.etiqueta,
         IDVALOR: selectedRow.valor,
         IDGRUPOET: selectedRow.idgroup,
-        ID: selectedRow.idg
-        
+        ID: selectedRow.idg,
+        // Datos a actualizar
+        data: {
+          ACTIVO: true,
+          BORRADO: false
+          // Opcional: agregar auditoría
+          // FECHAULTMOD: new Date().toISOString().split('T')[0],
+          // HORAULTMOD: new Date().toLocaleTimeString('en-GB'),
+          // USUARIOMOD: "FMIRANDAJ"
+        }
       };
 
-      const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=DeleteOne&DBServer=${dbConnection}`;
-      await axios.post(url, payload);
+      console.log("📤 Activando registro:", payload);
 
-      alert("✅ Registro activado");
+      const response = await axios.post(url, payload);
+
+      console.log("📥 Respuesta:", response.data);
+
+      alert("✅ Registro activado correctamente");
+
       // 🔄 Refrescar la tabla
       const res = await axios.post(
         `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
@@ -237,13 +257,14 @@ export default function App() {
           estado: item.ACTIVO ? "Activo" : "Inactivo",
         })) || [];
       setData(records);
+      setSelectedRow(null);
 
     } catch (err) {
-      console.error("Error al activar:", err);
-      alert("❌ No se pudo activar el registro");
+      console.error("❌ Error al activar:", err);
+      console.error("❌ Detalles:", err.response?.data);
+      alert(`❌ No se pudo activar: ${err.response?.data?.message || err.message}`);
     }
   };
-
 
   const handleDesactivar = async () => {
     if (!selectedRow) { alert("Selecciona un registro"); return; }
@@ -304,7 +325,7 @@ export default function App() {
       const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=DeleteHard&DBServer=${dbConnection}`;
       await axios.post(url, payload);
 
-      alert("🟡 Registro eliminado");
+      alert("🟡 Registro elimina");
       // 🔄 Refrescar tabla
       const res = await axios.post(
         `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
