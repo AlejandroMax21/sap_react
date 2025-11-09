@@ -55,7 +55,7 @@ export default function App() {
     setDbPost(dbPost === "MongoDB" ? "Azure" : "MongoDB");
   };
 
-  // 🔹 Cargar datos del backend
+  // Cargar datos del backend
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -145,7 +145,7 @@ export default function App() {
       if (res.data?.success || res.status === 200) {
         alert(`✅ Registro ${isEditing ? "actualizado" : "creado"} correctamente`);
 
-        // 🔄 Refrescar los datos después de guardar
+        // Refrescar los datos después de guardar
         const resFetch = await axios.post(
           `http://localhost:4004/api/security/gruposet/crud?ProcessType=GetAll&DBServer=${dbConnection}`,
           {}
@@ -210,7 +210,6 @@ export default function App() {
     try {
       const url = `http://localhost:4004/api/security/gruposet/crud?ProcessType=UpdateOne&DBServer=${dbConnection}&LoggedUser=FMIRANDAJ`;
 
-      // Payload con la estructura que usa tu backend
       const payload = {
         // Llaves para identificar el registro
         IDSOCIEDAD: selectedRow.sociedad,
@@ -223,10 +222,6 @@ export default function App() {
         data: {
           ACTIVO: true,
           BORRADO: false
-          // Opcional: agregar auditoría
-          // FECHAULTMOD: new Date().toISOString().split('T')[0],
-          // HORAULTMOD: new Date().toLocaleTimeString('en-GB'),
-          // USUARIOMOD: "FMIRANDAJ"
         }
       };
 
